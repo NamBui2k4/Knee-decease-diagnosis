@@ -1,5 +1,8 @@
 # Ignore dataset folder
 dataset/
+venv/
+output.mp4/
+
 
 # Ignore other files or folders
 *.log
