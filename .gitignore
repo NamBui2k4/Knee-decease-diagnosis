@@ -2,7 +2,8 @@
 dataset/
 venv/
 output.mp4/
-
+video/
+font/
 
 # Ignore other files or folders
 *.log
