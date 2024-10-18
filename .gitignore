@@ -4,6 +4,7 @@ venv/
 output.mp4/
 video/
 font/
+.obsidian/
 
 # Ignore other files or folders
 *.log
