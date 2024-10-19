@@ -5,8 +5,11 @@ output.mp4/
 video/
 font/
 .obsidian/
+.idea/
+
 
 # Ignore other files or folders
 *.log
 *.csv
 *.sqlite
+requirements.txt
