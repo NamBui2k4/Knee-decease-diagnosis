@@ -6,7 +6,9 @@ video/
 font/
 .obsidian/
 .idea/
-
+pdf/
+.idea/
+font/
 
 # Ignore other files or folders
 *.log
