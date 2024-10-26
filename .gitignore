@@ -4,8 +4,14 @@ venv/
 output.mp4/
 video/
 font/
+.obsidian/
+.idea/
+pdf/
+.idea/
+font/
 
 # Ignore other files or folders
 *.log
 *.csv
 *.sqlite
+requirements.txt
