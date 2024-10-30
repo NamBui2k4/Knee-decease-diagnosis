@@ -32,4 +32,4 @@ Ta có nhận xét:
 # Link
 - Ở đây là các link có thể tìm đọc để hiểu thêm về histogram.
 https://www.50mm.vn/2016/06/01/hau-ky-can-ban-cach-doc-histogram/
-
+https://stackoverflow.com/questions/67624759/how-to-segment-femur-from-x-ray-in-opencv
