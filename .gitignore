@@ -7,8 +7,9 @@ font/
 .obsidian/
 .idea/
 pdf/
-.idea/
 font/
+smallData_train/
+.vscode/
 
 # Ignore other files or folders
 *.log
