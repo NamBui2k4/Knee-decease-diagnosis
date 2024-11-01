@@ -28,6 +28,7 @@ Ta có nhận xét:
 - Hiện tại thì vs ảnh lúc đầu quá sáng thì CLAHE vẫn chưa cân bằng đc 
 - Mình cững chưa hiểu cách cân bằng của 2 giải thuật 
 - Mình chưa xác định được là nó đã oke chưa và chưa thử train nó như thế nào. Cái này mình họp rồi thảo luận. 
+- Hiện tại mình có 1 số pdf của về explainable AI XAI để đọc mà mình chưa đọc về nó 
 
 # Link
 - Ở đây là các link có thể tìm đọc để hiểu thêm về histogram.
