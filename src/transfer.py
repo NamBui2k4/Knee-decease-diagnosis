@@ -6,17 +6,9 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision.datasets import ImageFolder
 from tqdm import tqdm
 from torch.utils.data import DataLoader
-from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, recall_score, f1_score
+from sklearn.metrics import accuracy_score, confusion_matrix
 import numpy as np
-from torchvision.models import resnet18, ResNet18_Weights, vgg11, VGG11_Weights, vit_b_16, ViT_B_16_Weights
-
-from sklearn.metrics import roc_curve, auc
-import matplotlib.pyplot as plt
-import argparse
-import shutil
-import warnings
-import matplotlib.pyplot as plt
-
+from torchvision.models import resnet18, ResNet18_Weights
 from torchvision.transforms import (Compose,
                                     RandomResizedCrop,
                                     RandomHorizontalFlip,
@@ -25,7 +17,14 @@ from torchvision.transforms import (Compose,
                                     Resize,
                                     CenterCrop
                                     )
+import matplotlib.pyplot as plt
+import argparse
+import shutil
+import warnings
 
+from torchvision.models import efficientnet_b2
+import torch.nn as nn
+import warnings
 
 warnings.filterwarnings("ignore")
 
@@ -53,41 +52,6 @@ def get_mean_std(loader):
     mean /= len(loader.dataset)
     std /= len(loader.dataset)
     return mean.tolist(), std.tolist()
-
-
-def plot_roc_curve(writer, y_true, y_score, class_names, epoch):
-    fpr = dict()
-    tpr = dict()
-    roc_auc = dict()
-    colours = ['blue', 'red', 'green', 'purple', 'orange', 'yellow', 'pink']
-    # Chạy vòng lặp qua từng class và tính ROC cho từng class
-    for i, class_name in enumerate(class_names):
-        # Tạo nhãn nhị phân cho class hiện tại: 1 là class i, 0 là các class khác
-        binary_labels = [1 if label == i else 0 for label in y_true]
-
-        # Chuyển dự đoán thành xác suất hoặc giá trị dự đoán tương ứng cho class i
-        binary_scores = [1 if score == i else 0 for score in y_score]
-
-        # Tính ROC cho class i
-        fpr[i], tpr[i], _ = roc_curve(binary_labels, binary_scores)
-        roc_auc[i] = auc(fpr[i], tpr[i])
-
-    # Plot ROC curve cho từng class
-    plt.figure(figsize=(10, 8))
-    for i, color in zip(range(len(class_names)), colours):
-        plt.plot(fpr[i], tpr[i], color=color, lw=2,
-                 label=f'ROC curve of class {class_names[i]} (area = {roc_auc[i]:.2f})')
-
-    plt.plot([0, 1], [0, 1], 'k--', lw=2)
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('Receiver Operating Characteristic')
-    plt.legend(loc="lower right")
-    writer.add_figure('roc_curve', plt.gcf(), epoch)
-    plt.show()
-    plt.close()
 
 
 def plot_confusion_matrix(writer, cm, class_names, epoch):
@@ -125,26 +89,6 @@ def plot_confusion_matrix(writer, cm, class_names, epoch):
     writer.add_figure('confusion_matrix', figure, epoch)
 
 
-def metrics_evaluations(writer, optimizer, epoch, best_epoch, metric_score, best_metric_score, metric_name, model,
-                        model_checkpoint_path):
-    writer.add_scalar(tag=f'{metric_name}/val', scalar_value=metric_score, global_step=epoch)
-
-    # show kết quả
-
-    checkpoint = {
-        'state': model.state_dict(),
-        'epoch': epoch,
-        'optimizer': optimizer.state_dict(),
-        'best_epoch': best_epoch,
-        f'best_{metric_name}': best_metric_score
-    }
-
-    if best_metric_score < metric_score:
-        best_metric_score = metric_score
-        best_epoc = epoch
-        torch.save(checkpoint, model_checkpoint_path + '/' + f'best_{metric_name}.pt')
-
-
 def preprocessing():
     data_transforms = {
         'train': Compose([
@@ -161,8 +105,8 @@ def preprocessing():
         ]),
     }
 
-    temp_val = '/kaggle/input/knee-dataset/dataset/test'
-    temp_train = '/kaggle/input/knee-dataset/dataset/train'
+    temp_val = '/kaggle/input/data-knee-original/dataset/test'
+    temp_train = '/kaggle/input/data-knee-original/dataset/train'
 
     train_set = ImageFolder(root='../dataset/train', transform=data_transforms['train'])
     train_loader = DataLoader(
@@ -184,27 +128,32 @@ def preprocessing():
     return train_loader, val_loader
 
 
-def transfer_learning(model, model_name, classes, criterion, optimizer, parse, train_loader, val_loader):
-    
+def transfer_learning(model, model_name, criterion, optimizer, parse, train_loader, val_loader):
     writer = SummaryWriter(parse.tensorboard)
 
-    device = torch.device("cuda")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model.to(device)
 
-    # create model checkpoint path is not exist
+    # '/kaggle/working/' + parse.checkpoint_dir + "/" + model_name
+    model_checkpoint_path = '/kaggle/working/' + parse.checkpoint_dir + "/" + model_name
 
-    model_checkpoint_path = os.path.join(parse.checkpoint_dir, model_name)
     os.makedirs(model_checkpoint_path, exist_ok=True)
+
+    if not os.path.exists(model_checkpoint_path):
+        os.mkdir(model_checkpoint_path)
 
     for epoch in range(parse.epochs):
         print('-' * 10)
         print(f'Epoch {epoch + 1}/{parse.epochs}')
 
+        best_acc = -999
+        best_epoch = 0
+
         # training
         model.train()
         loss_recorded = []
-        all_pred = []
+        all_classes = []
         all_labels = []
 
         progress_bar = tqdm(train_loader, colour='yellow')
@@ -214,7 +163,7 @@ def transfer_learning(model, model_name, classes, criterion, optimizer, parse, t
 
             # foward
             pred = model(images)
-            max_pred = torch.argmax(pred, dim=1)
+            classes = torch.argmax(pred, dim=1)
             loss = criterion(pred, labels)
 
             # backward
@@ -223,7 +172,7 @@ def transfer_learning(model, model_name, classes, criterion, optimizer, parse, t
             optimizer.step()  # cap nhat trong so
 
             all_labels.extend(labels.tolist())
-            all_pred.extend(max_pred.tolist())
+            all_classes.extend(classes.tolist())
 
             loss_recorded.append(loss.item())
 
@@ -231,18 +180,12 @@ def transfer_learning(model, model_name, classes, criterion, optimizer, parse, t
             writer.add_scalar(tag='Train/Loss', scalar_value=np.mean(loss_recorded),
                               global_step=epoch * len(train_loader) + iter)
 
-        # numerical metrics
-        acc = accuracy_score(all_labels, all_pred)
-        pre = precision_score(all_labels, all_pred, average='micro')
-        rec = recall_score(all_labels, all_pred, average='micro')
-        f1 = f1_score(all_labels, all_pred, average='micro')
-
-        print(
-            f'Acc: {acc:.4f}, precision: {pre:.4f}, recall: {rec:.4f}, f1_score: {f1:.4f} avg_oss: {np.mean(loss_recorded):.4f}')
+        acc = accuracy_score(all_labels, all_classes)
+        print(f'Acc: {acc}, Loss: {np.mean(loss_recorded)}')
 
         model.eval()
         all_labels = []  # Danh sách nhãn ban đầu của data
-        all_preds = []
+        all_outputs = []  # Danh sách output mà model dự đoán
         all_loss = []  # Danh sách loss ghi nhận khi validation
 
         progress_bar = tqdm(val_loader, colour='yellow')
@@ -263,118 +206,54 @@ def transfer_learning(model, model_name, classes, criterion, optimizer, parse, t
                 # Ghi nhận kết quả
                 all_loss.append(loss.item())
                 all_labels.extend(labels.tolist())
-                all_preds.extend(prediction.tolist())
+                all_outputs.extend(prediction.tolist())
 
                 progress_bar.set_description(f'Validation')
 
-            # numerical etrics
-            acc = accuracy_score(all_labels, all_preds)
-            pre = precision_score(all_labels, all_preds, average='micro')
-            rec = recall_score(all_labels, all_preds, average='micro')
-            f1 = f1_score(all_labels, all_preds, average='micro')
+            # Đánh giá tren tap validation
+            acc = accuracy_score(all_labels, all_outputs)
             avg_loss = np.mean(all_loss)
+            cm = confusion_matrix(all_labels, all_outputs)
 
-            print(
-                f'Acc: {acc:.4f}, precision: {pre:.4f}, recall: {rec:.4f}, f1_score: {f1:.4f} avg_oss: {avg_loss:.4f}')
+            plot_confusion_matrix(writer, cm, class_names=classes, epoch=epoch)
+
             writer.add_scalar(tag='avg_loss/val', scalar_value=avg_loss, global_step=epoch)
+            writer.add_scalar(tag='acc/val', scalar_value=acc, global_step=epoch)
 
-            best_acc = -999
-            best_f1 = -999
-            best_pre = -999
-            best_recall = -999
-            best_epoch = 0
+            # show kết quả
+            print(f'Acc: {acc:.4f}, avg loss: {avg_loss:.4f}')
 
-            metrics_evaluations(writer, optimizer, epoch, best_epoch, acc, best_acc, 'accuracy', model,
-                                model_checkpoint_path)
-            metrics_evaluations(writer, optimizer, epoch, best_epoch, f1, best_f1, 'f1', model, model_checkpoint_path)
-            metrics_evaluations(writer, optimizer, epoch, best_epoch, pre, best_pre, 'precision', model,
-                                model_checkpoint_path)
-            metrics_evaluations(writer, optimizer, epoch, best_epoch, rec, best_recall, 'recall', model,
-                                model_checkpoint_path)
+            checkpoint = {
+                'state': model.state_dict(),
+                'epoch': epoch,
+                'optimizer': optimizer.state_dict(),
+                'best_epoch': best_epoch,
+                'best_accuracy': best_acc
+            }
 
-            # confusion matrix
-            cm = confusion_matrix(all_labels, all_preds)
-            plot_confusion_matrix(writer, cm, classes, epoch)
+            if best_acc < acc:
+                best_acc = acc
+                best_epoc = epoch
+                torch.save(checkpoint, model_checkpoint_path + '/' + 'best.pt')
 
-            # ROC curve
-            plot_roc_curve(writer, all_labels, all_preds, classes, epoch)
-            
 
 if __name__ == '__main__':
     train_loader, val_loader = preprocessing()
     parse = parse_arg()
-    classes = ['Không mắc bệnh (normal)', 'có dấu hiệu thoái hóa (doubtful)',
-               'thoái hóa nhẹ (mild)', 'thoái hóa vừa phải (moderate)',
-               'thoái hóa nghiêm trọng (severe)',
-               'thiếu xương (osteopenia)', 'loãng xương (Osteoporosis)']
-
+    classes = lasses = ['Không mắc bệnh (normal)', 'có dấu hiệu thoái hóa (doubtful)', 'thoái hóa nhẹ (mild)',
+                        'thoái hóa vừa phải (moderate)', 'thoái hóa nghiêm trọng (severe)',
+                        'thiếu xương (osteopenia)', 'loãng xương (Osteoporosis)']
     if os.path.exists(parse.tensorboard):
         shutil.rmtree(parse.tensorboard)
     os.mkdir(parse.tensorboard)
 
+    
+    model = torch.hub.load('pytorch/vision:v0.10.0', 'mobilenet_v2', pretrained=True)
+
+    model.classifier[1] = nn.Linear(model.last_channel, out_features=7, bias=True)
+
+    optimizer = optim.Adam(model.parameters(), lr=parse.lr)
     # criterion
     criterion = nn.CrossEntropyLoss()
-
-    #   ---------------------------------------------------
-    # Resnet_18
-    # resnet_18 = resnet18(weights=ResNet18_Weights)
-    # resnet_18.fc = nn.Linear(in_features=512, out_features=len(classes), bias=True)
-    # optimizer = optim.Adam(resnet_18.parameters(), lr=parse.lr)
-    # transfer_learning(resnet_18,
-    #                   'resnet_18',
-    #                   classes,
-    #                   criterion,
-    #                   optimizer,
-    #                   parse,
-    #                   train_loader,
-    #                   val_loader
-    #                   )
-
-    # -----------------------------------------------------
-    # Efficen net
-
-    # eff_net = 
     
-    # -----------------------------------------------------
-    # VGG11
-    # vgg_11 = vgg11(weights=VGG11_Weights)
-    # vgg_11.classifier[6] = nn.Linear(in_features=4096, out_features=len(classes), bias=True)
-    # optimizer = optim.Adam(vgg_11.parameters(), lr=parse.lr)
-    # transfer_learning(resnet_18,
-    #                   'vgg11',
-    #                   classes,
-    #                   criterion,
-    #                   optimizer,
-    #                   parse,
-    #                   train_loader,
-    #                   val_loader
-    #                   )
-
-    #   -----------------------------------------------------
-
-    # VGG11
-    # vgg_11 = vgg11(weights=VGG11_Weights)
-    # vgg_11.classifier[6] = nn.Linear(in_features=4096, out_features=len(classes), bias=True)
-    # optimizer = optim.Adam(vgg_11.parameters(), lr=parse.lr)
-    # transfer_learning(resnet_18,
-    #                   'vgg11',
-    #                   classes,
-    #                   criterion,
-    #                   optimizer,
-    #                   parse,
-    #                   train_loader,
-    #                   val_loader
-    #                   )
-    # vit_b_16
-    vit = vit_b_16(weights=ViT_B_16_Weights)
-    vit.heads.head = nn.Linear(in_features=768, out_features=len(classes), bias=True)
-    optimizer = optim.Adam(vit.parameters(), lr=parse.lr)
-    transfer_learning(vit,
-                      'vit_b_16',
-                      classes,
-                      criterion,
-                      optimizer,
-                      parse,
-                      train_loader,
-                      val_loader
-                      ) 
+    transfer_learning(model, 'mobilenet_v2', criterion, optimizer, parse, train_loader, val_loader)

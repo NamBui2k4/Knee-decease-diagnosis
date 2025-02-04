@@ -5,7 +5,7 @@ from torchvision.transforms import ToTensor, Resize, Compose
 from torch.utils.data import DataLoader
 from torch import optim
 import torch.nn as nn
-from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, recall_score, f1_score, roc_curve, auc
+from sklearn.metrics import accuracy_score, confusion_matrix
 import warnings
 import shutil, os
 import numpy as np
