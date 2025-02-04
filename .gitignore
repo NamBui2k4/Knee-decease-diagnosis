@@ -1,0 +1,23 @@
+# Ignore dataset folder
+dataset/
+venv/
+output.mp4/
+video/
+font/
+<<<<<<< HEAD
+=======
+.obsidian/
+.idea/
+pdf/
+.idea/
+font/
+>>>>>>> 449464f7b57b71e09a10f67674e7c958d32d50b5
+
+# Ignore other files or folders
+*.log
+*.csv
+*.sqlite
+<<<<<<< HEAD
+=======
+requirements.txt
+>>>>>>> 449464f7b57b71e09a10f67674e7c958d32d50b5
