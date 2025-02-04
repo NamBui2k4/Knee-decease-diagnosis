@@ -1,9 +1,11 @@
 # Ignore dataset folder
 dataset/
-venv/
 output.mp4/
+dashboard/
 video/
 font/
+docs/
+test_data/
 
 # Ignore other files or folders
 *.log
