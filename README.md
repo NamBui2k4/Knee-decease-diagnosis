@@ -9,6 +9,15 @@ This research project focuses on applying artificial intelligence (AI) to diagno
 3. **Osteoporosis**
 
 ## Disease Types and X-ray Characteristics
+
+**Normal knee without any trouble:**
+  - Bones have uniform density with no abnormalities.
+  - The joint space is even and not narrowed.
+  - No osteophytes or other abnormalities.
+
+![normal](https://github.com/user-attachments/assets/c245e436-362c-4823-9a6c-555189bd11b6)
+
+
 ### 1. Osteoarthritis
 Osteoarthritis is a chronic joint disease characterized by cartilage degradation and loss. X-ray indicators include:
 - Joint space narrowing
@@ -22,14 +31,18 @@ Osteoarthritis severity is assessed based on the **Kellgren-Lawrence grading sca
 - **Moderate**: Moderate joint space narrowing with multiple osteophytes
 - **Severe**: Severe joint space narrowing with subchondral bone sclerosis
 
+**The following  images (from left to right) show severities of the decease. The last three images reveal the spikes growing from bones.**
+
+![Osteoarthritis](https://github.com/user-attachments/assets/efef158c-5102-4f7a-8de9-095185389e57)
+
+Comparing **normal** and **Severe**: Space narrowing significantly
+
+![Osteoarthritis](https://github.com/user-attachments/assets/226d0e47-4956-4327-bdda-cec4168340ac)
+
 ### 2. Osteopenia and Osteoporosis
+
 Diagnosis of **osteoporosis** and **osteopenia** is commonly performed using **Dual Energy X-ray Absorptiometry (DEXA)** imaging.
 
-Based on X-ray images, three disease levels are identified:
-- **Normal**:
-  - Bones have uniform density with no abnormalities.
-  - The joint space is even and not narrowed.
-  - No osteophytes or other abnormalities.
 - **Osteopenia**:
   - Bones appear slightly translucent compared to normal.
   - Bone trabeculae may be more visible due to reduced calcium density.
@@ -37,6 +50,9 @@ Based on X-ray images, three disease levels are identified:
   - Bones appear significantly translucent.
   - Small fractures or cracks may be visible due to weak bones.
   - Bone trabeculae are prominently visible.
+
+![Picture1](https://github.com/user-attachments/assets/6a3a5696-56d5-4a95-b8ea-e5a798e7d0c9)
+
 
 ## Models Used
 The project evaluates and implements multiple deep learning models, including:
@@ -63,9 +79,31 @@ The dataset is collected from three primary sources:
 - [Dataset 2](https://data.mendeley.com/datasets/t9ndx37v5h/1)
 - [Dataset 3](https://data.mendeley.com/datasets/fxjm8fb6mw/2)
 
+Dataset's format:
+```
+├───train
+│   ├───normal
+│   ├───oa_doubtful
+│   ├───oa_mild
+│   ├───oa_moderate
+│   ├───oa_severe
+│   ├───osteopenia
+│   └───osteoporosis
+└───val
+    ├───normal
+    ├───oa_doubtful
+    ├───oa_mild
+    ├───oa_moderate
+    ├───oa_severe
+    ├───osteopenia
+    └───osteoporosis
+```
+Each of `[normal, oa_doubtful, oa_mild, oa_moderate, oa_severe, osteopenia, osteoporosis]` is label of each image.
+
 ## Result
 
-![](https://s2.ezgif.com/tmp/ezgif-2-bb46c8a4e4.gif)
+
+![output](https://github.com/user-attachments/assets/41aa42db-a263-4c67-9d33-71219df84616)
 
 
 ## Conclusion
