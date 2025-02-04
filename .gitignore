@@ -1,6 +1,8 @@
 # Ignore dataset folder
 dataset/
-checkpoint/
+checkpoint/resnet_18/
+checkpoint/mobilenet_v2/
+checkpoint/my_model/
 output.mp4/
 dashboard/
 video/
