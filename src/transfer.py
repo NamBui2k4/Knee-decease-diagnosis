@@ -310,10 +310,10 @@ def transfer_learning(model, model_name, classes, criterion, optimizer, parse, t
 if __name__ == '__main__':
     train_loader, val_loader = preprocessing()
     parse = parse_arg()
-    classes = ['Không mắc bệnh (normal)', 'có dấu hiệu thoái hóa (doubtful)',
-                'thoái hóa nhẹ (mild)', 'thoái hóa vừa phải (moderate)',
-                'thoái hóa nghiêm trọng (severe)',
-                'thiếu xương (osteopenia)', 'loãng xương (Osteoporosis)']
+    classes = ['normal', 'doubtful',
+                'mild', 'moderate',
+                'severe',
+                'osteopenia', 'Osteoporosis']
 
     if os.path.exists(parse.tensorboard):
         shutil.rmtree(parse.tensorboard)
