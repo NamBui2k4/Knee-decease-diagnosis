@@ -5,7 +5,7 @@ from torchvision.transforms import ToTensor, Resize, Compose
 from torch.utils.data import DataLoader
 from torch import optim
 import torch.nn as nn
-from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.metrics import accuracy_score, confusion_matrix,precision_score, recall_score, f1_score, roc_curve, auc
 import warnings
 import shutil, os
 import numpy as np
@@ -127,8 +127,8 @@ def metrics_evaluations(writer, optimizer, epoch, score, metrics, name, model,
         'optimizer': optimizer.state_dict(),
         'best_epoch': metrics['best_epoch'],
         f'best_{name}': metrics[f'best_{name}']
-    }
-
+    }    
+    
     if metrics[f'best_{name}'] < score:
         metrics[f'best_{name}'] = score
         metrics[f'best_epoch'] = epoch
@@ -184,8 +184,8 @@ def train(arg):
         Resize((arg.image_size, arg.image_size)),
     ])
 
-    temp_val = '/kaggle/input/knee-dataset/dataset/val'
-    temp_train = '/kaggle/input/knee-dataset/dataset/train'
+    # temp_val = '/kaggle/input/knee-dataset/dataset/val'
+    # temp_train = '/kaggle/input/knee-dataset/dataset/train'
 
     val = ImageFolder(root='../dataset/val', transform=transform)
     train = ImageFolder(root='../dataset/train', transform=transform)
@@ -251,6 +251,14 @@ def train(arg):
             os.remove(os.path.join(arg.tensorboard, board))
     writer = SummaryWriter(arg.tensorboard)
 
+    metrics = {
+                'best_accuracy' : -999,
+                'best_f1' : -999,
+                'best_precision' : -999,
+                'best_recall' : -999,
+                'best_epoch' : 0
+    }
+     
     for epoch in range(arg.epochs):
 
         # Chỉ định model ở trạng thái training.
@@ -341,13 +349,7 @@ def train(arg):
             print(f'Validation: \n Acc: {acc:.4f}, precision: {pre:.4f}, recall: {rec:.4f}, f1_score: {f1:.4f} avg_oss: {avg_loss:.4f}')
             writer.add_scalar(tag='avg_loss/val', scalar_value=avg_loss, global_step=epoch)
 
-            metrics = {
-                'best_accuracy' : -999,
-                'best_f1' : -999,
-                'best_precision' : -999,
-                'best_recall' : -999,
-                'best_epoch' : 0
-            }
+           
 
             metrics_evaluations(writer, optimizer, epoch, acc, metrics, 'accuracy', model,
                                 model_checkpoint_path)
