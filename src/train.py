@@ -206,7 +206,7 @@ def train(arg):
     )
 
     classes = train.classes
-# -----------------------------------------------------------------------------------------
+    # -----------------------------------------------------------------------------------------
 
     model = CNN(num_class=len(classes))
     optimizer = optim.Adam(model.parameters(), lr=arg.lr)
@@ -248,7 +248,7 @@ def train(arg):
     list_board = [f for f in os.listdir(arg.tensorboard)]
     if len(list_board) > 0:
         for board in list_board:
-            os.remove(os.path.join(arg.tensorboard, board))
+            shutil.rmtree(os.path.join(arg.tensorboard, board))
     writer = SummaryWriter(arg.tensorboard)
 
     metrics = {
