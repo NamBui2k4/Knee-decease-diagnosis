@@ -249,7 +249,7 @@ def train(arg):
     if len(list_board) > 0:
         for board in list_board:
             shutil.rmtree(os.path.join(arg.tensorboard, board))
-    writer = SummaryWriter(arg.tensorboard)
+    writer = SummaryWriter(arg.tensorboard + '/my_model')
 
     metrics = {
                 'best_accuracy' : -999,
