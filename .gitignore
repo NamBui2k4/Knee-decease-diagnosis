@@ -2,11 +2,12 @@
 dataset/
 checkpoint/
 output.mp4
-dashboard/
+dashboad/
 video/
 font/
 docs/
 test_data/
+.idea/
 
 # Ignore other files or folders
 *.log
