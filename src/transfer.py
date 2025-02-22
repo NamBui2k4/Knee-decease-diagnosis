@@ -30,7 +30,7 @@ warnings.filterwarnings("ignore")
 
 def parse_arg():
     parse = argparse.ArgumentParser(description='Transfer learning')
-    parse.add_argument('--epochs', '-e', type=int, default=10, help='number of time model training')
+    parse.add_argument('--epochs', '-e', type=int, default=100, help='number of time model training')
     parse.add_argument('--checkpoint-dir', '-d', type=str, default='../checkpoint', help='where to place checkpoint')
     parse.add_argument('--tensorboard', '-b', type=str, default='../dashboad', help='place to store the visualization')
     parse.add_argument('--lr', '-l', type=float, default=1e-3)
@@ -135,9 +135,6 @@ def metrics_evaluations(writer, optimizer, epoch, score, metrics, name, model,
         'best_epoch': metrics['best_epoch'],
         f'best_{name}': metrics[f'best_{name}']
     }    
-    
-    print('current best', metrics[f'best_{name}'])
-    print('score', score)
     
     if metrics[f'best_{name}'] < score:
         metrics[f'best_{name}'] = score
