@@ -1,76 +1,93 @@
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
-from torchvision.transforms import ToTensor, Resize, Compose
-from torchvision.datasets import ImageFolder
+import torch.nn.functional as F
+import torchvision.transforms.functional as TF
 
+class UNET(nn.Module):
+    def __init__(self, in_channels=3, out_channels=1):
+        super(UNET, self).__init__()
 
-class CNN(nn.Module):
-    def __init__(self, num_class):
-        super().__init__()
-        # input: torch.Size([32, 3, 380, 380])
-        self.conv1 = self.make_conv(3, 8,3) # torch.Size([32, 8, 126, 126])
-        self.conv2 = self.make_conv(8, 16,3) # torch.Size([32, 16, 42, 42])
-        self.conv3 = self.make_conv(16, 32,3) # torch.Size([32, 32, 14, 14])
-        self.conv4 = self.make_conv(32, 64,3) # torch.Size([32, 64, 4, 4])
+        # Encoder
+        self.conv1 = self.DoubleConv(in_channels, 64)
+        self.conv2 = self.DoubleConv(64, 128)
+        self.conv3 = self.DoubleConv(128, 256)
+        self.conv4 = self.DoubleConv(256, 512)
 
-        self.fc1 = nn.Sequential(
-            nn.Linear(64 * 4 * 4, 512),
-            nn.Dropout2d(p=0.5),
-            nn.ReLU()
-        )
+        # Bottleneck
+        self.conv5 = self.DoubleConv(512, 1024)
 
-        self.fc2 = nn.Sequential(
-            nn.Linear(512, 128),
-            nn.Dropout2d(p=0.5),
-            nn.ReLU()
-        )
+        # Decoder
+        self.up6 = self.UpConv(1024, 512)
+        self.conv6 = self.DoubleConv(1024, 512)
 
-        self.fc3 = nn.Sequential(
-            nn.Linear(128, 64),
-            nn.Dropout2d(p=0.5),
-            nn.ReLU()
-        )
+        self.up7 = self.UpConv(512, 256)
+        self.conv7 = self.DoubleConv(512, 256)
 
-        self.fc4 = nn.Sequential(
-            nn.Linear(64, 32),
-            nn.Dropout2d(p=0.5),
-            nn.ReLU()
-        )
-        self.fc5 = nn.Sequential(
-            nn.Linear(32, 16),
-            nn.Dropout2d(p=0.5),
-            nn.ReLU()
-        )
-        self.fc6 = nn.Linear(16, num_class)
+        self.up8 = self.UpConv(256, 128)
+        self.conv8 = self.DoubleConv(256, 128)
 
-    def make_conv(self, in_channels, out_channels, kernel_size):
+        self.up9 = self.UpConv(128, 64)
+        self.conv9 = self.DoubleConv(128, 64)
+
+        # Output Layer
+        self.final = nn.Conv2d(64, out_channels, 1)
+
+    def DoubleConv(self, in_channels, out_channels):
         return nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, stride=1, padding=1),
-            nn.BatchNorm2d(num_features=out_channels),
-            nn.ReLU(),
-
-            nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size, stride=1, padding=1),
-            nn.BatchNorm2d(num_features=out_channels),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3)
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
         )
+
+    def UpConv(self, in_channels, out_channels):
+        return nn.ConvTranspose2d(in_channels, out_channels, kernel_size=2, stride=2)
+
+    def crop(self, tensor, target_tensor):
+        """Cắt tensor để đảm bảo khớp kích thước với target_tensor"""
+        _, _, h, w = target_tensor.shape
+        return TF.center_crop(tensor, [h, w])
+
     def forward(self, x):
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        x = self.conv4(x)
+        # Encoder
+        c1 = self.conv1(x)
+        p1 = F.max_pool2d(c1, 2)
 
-        b,c,h,w = x.size()
-        x = x.view(b, c * h * w) # flatten
+        c2 = self.conv2(p1)
+        p2 = F.max_pool2d(c2, 2)
 
-        x = self.fc1(x)
-        x = self.fc2(x)
-        x = self.fc3(x)
-        x = self.fc4(x)
-        x = self.fc5(x)
-        x = self.fc6(x)
-        return x
+        c3 = self.conv3(p2)
+        p3 = F.max_pool2d(c3, 2)
 
-if __name__ == '__main__':
-    model = CNN(3)
+        c4 = self.conv4(p3)
+        p4 = F.max_pool2d(c4, 2)
+
+        c5 = self.conv5(p4)
+
+        # Decoder
+        u6 = self.up6(c5)
+        c6 = self.conv6(torch.cat([u6, self.crop(c4, u6)], dim=1))
+
+        u7 = self.up7(c6)
+        c7 = self.conv7(torch.cat([u7, self.crop(c3, u7)], dim=1))
+
+        u8 = self.up8(c7)
+        c8 = self.conv8(torch.cat([u8, self.crop(c2, u8)], dim=1))
+
+        u9 = self.up9(c8)
+        c9 = self.conv9(torch.cat([u9, self.crop(c1, u9)], dim=1))
+
+        output = self.final(c9)  # Không cần softmax (dùng trong loss function)
+
+        return output
+
+def test():
+    x = torch.randn((1, 3, 161, 161))  # Batch size = 1, 3 channels, 161x161
+    model = UNET(in_channels=3, out_channels=1)
+    preds = model(x)
+    print(preds.shape)  # In ra để kiểm tra kích thước đầu ra
+
+if __name__ == "__main__":
+    test()
