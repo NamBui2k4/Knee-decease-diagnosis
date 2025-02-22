@@ -8,6 +8,7 @@ font/
 docs/
 test_data/
 .idea/
+src/__pycache__/
 
 # Ignore other files or folders
 *.log
