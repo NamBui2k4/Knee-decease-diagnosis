@@ -16,3 +16,6 @@ smallData_train/
 *.csv
 *.sqlite
 requirements.txt
+/output_clahe
+/TestSmall
+/oversamplingClahe
